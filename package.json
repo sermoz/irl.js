@@ -1,0 +1,24 @@
+{
+  "name": "irl",
+  "version": "0.1.0",
+  "description": "Incremental Reactive Live programming environment for JavaScript",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "live",
+    "reactive",
+    "incremental",
+    "datalog",
+    "dynamic"
+  ],
+  "author": "Serhii Mozghovyi",
+  "license": "MIT",
+  "devDependencies": {
+    "eslint": "^9.17.0",
+    "irl": "file:irl",
+    "neostandard": "^0.12.0"
+  }
+}

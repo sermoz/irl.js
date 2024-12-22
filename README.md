@@ -1,5 +1,5 @@
 # IRL.js
-**In**cremental **R**eactive **L**ive programming environment for JavaScript.
+**I**ncremental **R**eactive **L**ive programming environment for JavaScript.
 
 Key principles:
 
