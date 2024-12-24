@@ -1,0 +1,33 @@
+# Milestone 0.1 plan:
+
+  - Support facts, not inferences yet:
+
+    ```js
+    import { DB } from '../my/module.js'
+
+    irl.assert(
+        DB.person('Serhii').isParentOf('Polina')
+    )
+
+    irl.assert([
+        DB.person('Nadya').isParentOf('Katya'),
+        DB.person('Yura').isParentOf('Katya')
+    ])
+    ```
+
+  - Support this playground type:
+
+    - User can enter a name in an input box field
+    - User can enter pairs, i.e. data for a binary predicate, e.g. `loves`
+    - User can enter a name to follow: either "whom does X love?" or "who loves X?"
+    - User should see how these observed lists are populated with new data as it's added
+      by those pairs.
+
+  - The same but with Node.js, no browser:
+    - Just a console app accepting input and notifying of changed projections with
+      console.log
+
+  - Even simpler, for starters:
+    - Module-level assertions of some fact
+    - Make a rule that does some side effect (writes to console.log)
+    - Then call `irl.stabilize()`
