@@ -24,7 +24,7 @@ async function loop (rl) {
       console.log(
         'Possible interactions:\n' +
         '   DB> ? dim1: arg1 dim2: arg2 ... dimN: argN\n' +
-        '   DB> ! dim1: val dim2: val2 ... dimN: valN\n' +
+        '   DB> ! dim1: val1 dim2: val2 ... dimN: valN\n' +
         '   DB> help\n' +
         '   DB> dump\n' +
         '   DB> quit\n'

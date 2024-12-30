@@ -23,7 +23,7 @@
  */
 
 import { proxyTarget } from './util/index.js'
-import * as mSlice from './slice.js'
+import { makeOpenLink, invertClosedLink } from './db-link.js'
 import { Predicate } from './predicate.js'
 import { Var } from './var.js'
 
@@ -37,13 +37,13 @@ Database.prototype.prev = null   // Needed for slice link traversals
 
 const databaseProxyHandler = {
   get (database, prop, receiver) {
-    return mSlice.makeOpenLink({ dim: prop, prev: database })
+    return makeOpenLink({ dim: prop, prev: database })
   }
 }
 
-export function assert (sliceLinkProxy) {
+export function assert (linkProxy) {
   // NOTE: no vars so far
-  const { database: db, args } = mSlice.reassemble(sliceLinkProxy)
+  const { database: db, args } = invertClosedLink(linkProxy)
 
   for (const dim in args) {
     if (args[dim] instanceof Var) {

@@ -1,13 +1,10 @@
 /**
- * Slice is roughly the same as "projection" but used in a different context.
+ * A link is what you get by referring to the database object directly:
+ * 
+ *    const openLink = D.person("Joe").isParentOf
+ *    const closedLink = D.person("Joe").isParentOf(v`Jane`)
  *
- * A slice is a data structure that refers to a particular predicate with the dimensions
- * bound either to specific fixed values or variables. A slice is simply "take this
- * predicate at these values", where "values" are partially or fully fixed.
- *
- * Projection is the same, but projections have identities: the same values for dimensions
- * should give the same projection object. Also, a projection is a container for data,
- * whereas slices are not associated with any data.
+ * Normally only "closed links" are being manipulated with.
  *
  */
 import { dumbFunc, proxyTarget } from './util/index.js'
@@ -39,7 +36,7 @@ const openLinkProxyHandler = {
   }
 }
 
-export function reassemble (closedLinkProxy) {
+export function invertClosedLink (closedLinkProxy) {
   const closedLink = proxyTarget(closedLinkProxy, closedLinkProxyHandler)
 
   const args = {}
