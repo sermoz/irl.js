@@ -44,7 +44,7 @@ const databaseProxyHandler = {
 export function assert (sliceLinkProxy) {
   // NOTE: no vars so far
   const { database: db, args } = mSlice.reassemble(sliceLinkProxy)
-  
+
   for (const dim in args) {
     if (args[dim] instanceof Var) {
       throw new Error("We don't support variables/inference in assert(...) yet")

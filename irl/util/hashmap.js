@@ -1,8 +1,8 @@
 /**
  * Hashmap is a data structure that maps keys to objects, like an ordinary JS Map.
- * 
+ *
  * The difference is that the Hashmap supports deep value semantics for the keys.
- * 
+ *
  */
 import * as mHash from './hash.js'
 import { methodFor } from './index.js'
@@ -36,8 +36,8 @@ methodFor(Hashmap, function add (key, val) {
   const entry = entryFor(this, key, hash)
 
   if (entry !== null) {
-    throw new Error(`Key already present`)
+    throw new Error('Key already present')
   }
 
-  this.entryByHash.set(hash, {key, val, next: this.entryByHash.get(hash) ?? null})
+  this.entryByHash.set(hash, { key, val, next: this.entryByHash.get(hash) ?? null })
 })

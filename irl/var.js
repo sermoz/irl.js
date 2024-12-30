@@ -10,7 +10,6 @@ export function internVar (name) {
   return v
 }
 
-
 /**
  * This is what's exported as "v", as in: v`Person`
  */

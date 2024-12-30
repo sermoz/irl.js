@@ -22,11 +22,9 @@ export function hash (obj) {
     case 'object':
       if (typeof obj[propHash] === 'number') {
         return obj[propHash]
-      }
-      else if (typeof obj[propHash] === 'function') {
+      } else if (typeof obj[propHash] === 'function') {
         return (obj[propHash] = smallInt(obj[propHash]()))
-      }
-      else {
+      } else {
         return hashOpaqueObject(obj)
       }
 
@@ -37,7 +35,6 @@ export function hash (obj) {
 }
 
 const propHash = Symbol('hash')
-
 
 /** Compress arbitrarily large numbers into smallInt hashes. */
 function hashNumber (n) {
