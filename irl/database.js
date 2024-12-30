@@ -25,6 +25,7 @@
 import { proxyTarget } from './util/index.js'
 import * as mSlice from './slice.js'
 import { Predicate } from './predicate.js'
+import { Var } from './var.js'
 
 export function Database () {
   this.predicates = Object.create(null)
@@ -43,19 +44,45 @@ const databaseProxyHandler = {
 export function assert (sliceLinkProxy) {
   // NOTE: no vars so far
   const { database: db, args } = mSlice.reassemble(sliceLinkProxy)
-  const dimensions = Object.keys(args)
-  const signature = dimensions.join('-')
-
-  let pred = db.predicates[signature]
-
-  if (pred === undefined) {
-    pred = db.predicates[signature] = new Predicate(dimensions)
+  
+  for (const dim in args) {
+    if (args[dim] instanceof Var) {
+      throw new Error("We don't support variables/inference in assert(...) yet")
+    }
   }
+
+  const dimensions = Object.keys(args)
+  const pred = internPredicate(db, dimensions)
 
   pred.addClause(args)
 }
 
-export function dumbDB (dbProxy) {
+function internPredicate (db, dimensions) {
+  const signature = dimensions.join('-')
+  let pred = db.predicates[signature]
+
+  if (pred === undefined) {
+    pred = db.predicates[signature] = new Predicate(db, dimensions)
+  }
+
+  return pred
+}
+
+export function assertByArgs (dbProxy, args) {
+  for (const dim in args) {
+    if (args[dim] instanceof Var) {
+      throw new Error("We don't support variables/inference in assert(...) yet")
+    }
+  }
+
+  const db = proxyTarget(dbProxy, databaseProxyHandler)
+  const dimensions = Object.keys(args)
+  const pred = internPredicate(db, dimensions)
+
+  pred.addClause(args)
+}
+
+export function dumpDB (dbProxy) {
   const db = proxyTarget(dbProxy, databaseProxyHandler)
 
   console.dir(db.predicates, { depth: 4 })

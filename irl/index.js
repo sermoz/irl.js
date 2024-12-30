@@ -1,1 +1,2 @@
-export { Database, assert, dumbDB } from './database.js'
+export { Database, assert, assertByArgs, dumpDB } from './database.js'
+export { tagVar as v } from './var.js'
