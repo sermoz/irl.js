@@ -1,6 +1,6 @@
 /**
  * A link is what you get by referring to the database object directly:
- * 
+ *
  *    const openLink = D.person("Joe").isParentOf
  *    const closedLink = D.person("Joe").isParentOf(v`Jane`)
  *
@@ -39,7 +39,7 @@ const openLinkProxyHandler = {
 export function invertClosedLink (closedLinkProxy) {
   const closedLink = proxyTarget(closedLinkProxy, closedLinkProxyHandler)
 
-  const args = {}
+  const datum = {}
   let database
 
   (function rec (link) {
@@ -49,11 +49,11 @@ export function invertClosedLink (closedLinkProxy) {
     }
 
     rec(link.prev)
-    args[link.dim] = link.val
+    datum[link.dim] = link.val
   })(closedLink)
 
   return {
     database,
-    args
+    datum
   }
 }

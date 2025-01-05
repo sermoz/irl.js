@@ -1,14 +1,22 @@
-function makeArray () {
-  return Reflect.construct(Array, [], fuck)
-}
+import * as irl from 'irl'
+import { v } from 'irl'
 
-fuck = function fuck () { }
+const DB = new irl.Database()
 
-fuck.prototype = {
-  __proto__: Array.prototype,
-  last () {
-    return this[this.length - 1]
-  }
-}
+// How would clauses with bodies look?
+irl.assert(DB.person(v`Aunt`).isAuntOf(v`Person`))
+  .when(
+    DB.person(v`Aunt`).sex('woman'),
+    DB.person(v`Aunt`).sibling(v`Sib`),
+    DB.person(v`Sib`).isParentOf(v`Person`)
+  )
 
-ar = makeArray()
+
+irl.assert({
+  what: DB.person(v`Aunt`).isAuntOf(v`Person`)),
+  when: irl.all(
+    DB.person(v`Aunt`).sex('woman'),
+    DB.person(v`Aunt`).sibling(v`Sib`),
+    DB.person(v`Sib`).isParentOf(v`Person`)
+  )
+})

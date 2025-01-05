@@ -22,16 +22,21 @@ async function loop (rl) {
 
     if (input === 'help') {
       console.log(
-        'Possible interactions:\n' +
-        '   DB> ? dim1: arg1 dim2: arg2 ... dimN: argN\n' +
-        '   DB> ! dim1: val1 dim2: val2 ... dimN: valN\n' +
-        '   DB> help\n' +
-        '   DB> dump\n' +
-        '   DB> quit\n'
+        [
+          'Possible interactions:',
+          '   DB> ? dim1: val1 dim2: val2 ... dimN: valN',
+          '   DB> ! dim1: val1 dim2: val2 ... dimN: valN',
+          '   DB> help',
+          '   DB> dump',
+          '   DB> quit',
+          '',
+          'Values can be:',
+          '  - _ (variable placeholder)',
+          '  - quoted strings ("string name")',
+          '  - integers',
+          '  - special names: true, false, null',
+        ].join('\n')
       )
-      console.log('Arguments are either values or variables')
-      console.log("Values are (quoted) strings, integers, 'true', 'false', 'null' (without apostrophes)")
-      console.log("Variables are just unquoted names (except 'true', 'false', 'null')")
       continue
     }
 
@@ -41,21 +46,34 @@ async function loop (rl) {
     }
 
     if (input.startsWith('!')) {
-      // Assert some new fact into the system
-      let args
+      const datum = parseDatum(input)
 
-      try {
-        args = parseArgs(input)
-      } catch (e) {
-        if (e instanceof ParseError) {
-          console.log(`Cannot parse at "${input.substr(e.index, 15)}"`)
+      if (datum !== null) {
+        if (Object.values(datum).includes(irl.unbound)) {
+          console.log('Cannot use variables in facts')
           continue
         }
 
-        throw e
+        irl.assert(D, datum)
       }
 
-      irl.assertByArgs(D, args)
+      continue
+    }
+
+    if (input.startsWith('?')) {
+      const args = parseDatum(input)
+
+      if (args !== null) {
+        irl.monitorProjection(D, args, {
+          onAdded (datum) {
+            console.log('+', datumAsString(datum))
+          },
+          onRemoved (datum) {
+            console.log('-', datumAsString(datum))
+          }
+        })
+      }
+
       continue
     }
 
@@ -63,9 +81,23 @@ async function loop (rl) {
   }
 }
 
-function parseArgs (str, idx = 1) {
-  const reArg = /(?<dim>[a-z]\w*):\s*((?<str>"[^"]*")|(?<num>[0-9]+)|(?<name>\w+))/iy
-  const args = {}
+function parseDatum (str, idx = 1) {
+  try {
+    return doParseDatum(str, idx)
+  }
+  catch (e) {
+    if (e instanceof ParseError) {
+      console.log(`Cannot parse at "${str.substr(e.index, 15)}"`)
+      return null
+    }
+
+    throw e
+  }
+}
+
+function doParseDatum (str, idx) {
+  const reDim = /(?<dim>[a-z]\w*):\s*((?<str>"[^"]*")|(?<num>[0-9]+)|(?<name>\w+))/iy
+  const datum = {}
 
   for (;;) {
     // Skip all spaces
@@ -77,19 +109,24 @@ function parseArgs (str, idx = 1) {
       break
     }
 
-    reArg.lastIndex = idx
+    reDim.lastIndex = idx
 
-    const mo = reArg.exec(str)
+    const mo = reDim.exec(str)
 
     if (mo === null) {
       throw new ParseError(idx)
+    }
+
+    if (Object.hasOwn(datum, mo.groups.dim)) {
+      throw new ParseError(idx, 'duplicate dimension')
     }
 
     let val
 
     if (mo.groups.str !== undefined) {
       val = JSON.parse(mo.groups.str)
-    } else if (mo.groups.num !== undefined) {
+    }
+    else if (mo.groups.num !== undefined) {
       const int = Number.parseInt(mo.groups.num)
 
       if (String(int) !== mo.groups.num) {
@@ -97,7 +134,8 @@ function parseArgs (str, idx = 1) {
       }
 
       val = int
-    } else if (mo.groups.name !== undefined) {
+    }
+    else if (mo.groups.name !== undefined) {
       switch (mo.groups.name) {
         case 'true':
           val = true
@@ -111,18 +149,23 @@ function parseArgs (str, idx = 1) {
           val = null
           break
 
+        case '_':
+          val = irl.unbound
+          break
+
         default:
-          val = irl.internVar(mo.groups.name)
+          throw new ParseError(idx, 'bad name')
       }
-    } else {
+    }
+    else {
       throw new Error()
     }
 
-    args[mo.groups.dim] = val
-    idx = reArg.lastIndex
+    datum[mo.groups.dim] = val
+    idx = reDim.lastIndex
   }
 
-  return args
+  return datum
 }
 
 class ParseError extends Error {
@@ -130,6 +173,19 @@ class ParseError extends Error {
     super(message || 'cannot parse')
     this.index = index
   }
+}
+
+function datumAsString (datum) {
+  return [
+    ...(function * () {
+      for (const dim in datum) {
+        yield dim
+        yield ': '
+        yield datum[dim]
+        yield ' '
+      }
+    }())
+  ].join('')
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

@@ -6,12 +6,12 @@
     import { DB } from '../my/module.js'
 
     irl.assert(
-        DB.person('Serhii').isParentOf('Polina')
+      DB.person('Serhii').isParentOf('Polina')
     )
 
     irl.assert([
-        DB.person('Nadya').isParentOf('Katya'),
-        DB.person('Yura').isParentOf('Katya')
+      DB.person('Nadya').isParentOf('Katya'),
+      DB.person('Yura').isParentOf('Katya')
     ])
     ```
 

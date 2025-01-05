@@ -25,7 +25,6 @@
 import { proxyTarget } from './util/index.js'
 import { makeOpenLink, invertClosedLink } from './db-link.js'
 import { Predicate } from './predicate.js'
-import { Var } from './var.js'
 
 export function Database () {
   this.predicates = Object.create(null)
@@ -33,7 +32,7 @@ export function Database () {
   return new Proxy(this, databaseProxyHandler)
 }
 
-Database.prototype.prev = null   // Needed for slice link traversals
+Database.prototype.prev = null   // Needed for link traversals
 
 const databaseProxyHandler = {
   get (database, prop, receiver) {
@@ -41,49 +40,53 @@ const databaseProxyHandler = {
   }
 }
 
-export function assert (linkProxy) {
-  // NOTE: no vars so far
-  const { database: db, args } = invertClosedLink(linkProxy)
+/**
+ * 1) assert(DB.dim1(val1).dim2(val2)...)
+ * 2) assert(DB, {dim1: val1, dim2: val2, ...})
+ */
+export function assert () {
+  let db, datum
 
-  for (const dim in args) {
-    if (args[dim] instanceof Var) {
-      throw new Error("We don't support variables/inference in assert(...) yet")
-    }
+  if (arguments.length === 1) {
+    const [linkProxy] = arguments
+    // NOTE: no vars so far
+    ;({ database: db, datum } = invertClosedLink(linkProxy))
+  }
+  else if (arguments.length === 2) {
+    let dbProxy
+
+    [dbProxy, datum] = arguments
+    db = proxyTarget(dbProxy, databaseProxyHandler)
+  }
+  else {
+    throw new Error('assert() misuse')
   }
 
-  const dimensions = Object.keys(args)
-  const pred = internPredicate(db, dimensions)
+  const pred = internPredicate(db, Object.keys(datum))
 
-  pred.addClause(args)
+  pred.addClause(datum)
 }
 
-function internPredicate (db, dimensions) {
-  const signature = dimensions.join('-')
+function internPredicate (db, shape) {
+  const signature = shape.join('-')
   let pred = db.predicates[signature]
 
   if (pred === undefined) {
-    pred = db.predicates[signature] = new Predicate(db, dimensions)
+    pred = db.predicates[signature] = new Predicate(db, shape)
   }
 
   return pred
-}
-
-export function assertByArgs (dbProxy, args) {
-  for (const dim in args) {
-    if (args[dim] instanceof Var) {
-      throw new Error("We don't support variables/inference in assert(...) yet")
-    }
-  }
-
-  const db = proxyTarget(dbProxy, databaseProxyHandler)
-  const dimensions = Object.keys(args)
-  const pred = internPredicate(db, dimensions)
-
-  pred.addClause(args)
 }
 
 export function dumpDB (dbProxy) {
   const db = proxyTarget(dbProxy, databaseProxyHandler)
 
   console.dir(db.predicates, { depth: 4 })
+}
+
+export function monitorProjection (dbProxy, section, observer) {
+  const db = proxyTarget(dbProxy, databaseProxyHandler)
+  const pred = internPredicate(db, Object.keys(section))
+
+  pred.internProjection(section, observer)
 }
