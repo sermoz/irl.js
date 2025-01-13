@@ -22,3 +22,9 @@ export function dumbFunc (props) {
 
   return Object.assign(func, props)
 }
+
+export function * map (I, fn) {
+  for (const i of I) {
+    yield fn(i)
+  }
+}

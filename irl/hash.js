@@ -1,3 +1,5 @@
+import { unbound } from './datum.js'
+
 /**
  *  This is based on Immutable.js hash implementation
  *  (see here: https://github.com/immutable-js/immutable-js/blob/main/src/Hash.js)
@@ -69,7 +71,11 @@ function hashString (string) {
 
 // TODO: implement caching
 function hashSymbol (sym) {
-  let code = 0x3418d9  // prime, taken for no particular reason, let's see
+  if (sym === unbound) {
+    return 0x64f02a6  // calculated with this same algorithm, just shortcut
+  }
+
+  let code = 0x3418d9  // prime, taken for no particular reason
 
   for (let i = 0, len = sym.description.length; i < len; i += 1) {
     code = Math.imul(31, code) + sym.description.charCodeAt(i) | 0
@@ -105,47 +111,12 @@ function hashOpaqueObject (obj) {
 /**
  * Combine hashes of some nested components, the order is important.
  */
-function orderedHash (hashes) {
+export function hashSeq (objs) {
   let code = 1
 
-  for (const hash of hashes) {
-    code = (Math.imul(31, code) + hash) | 0
+  for (const obj of objs) {
+    code = (Math.imul(31, code) + hashCode(obj)) | 0
   }
 
   return smi(code)
-}
-
-const propHash = Symbol('hash')
-
-export function datumHasHash (datum) {
-  return datum[propHash] !== undefined
-}
-
-/**
- * Remember: datum hash code is ever used within one shape (predicate).
- * So it doesn't take the shape (dimension names) into account.
- */
-function datumComputedHash (datum) {
-  return orderedHash(Object.values(datum).map(hashCode))
-}
-
-export function datumHash (datum) {
-  return datum[propHash] ?? datumComputedHash(datum)
-}
-
-export function datumWithHash (datum, hash) {
-  if (datum[propHash] !== undefined) {
-    return datum
-  }
-
-  const copy = { ...datum }
-
-  Object.defineProperty(copy, propHash, {
-    configurable: true,
-    enumerable: false,
-    writable: false,
-    value: hash ?? datumComputedHash(datum),
-  })
-
-  return copy
 }

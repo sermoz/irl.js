@@ -1,33 +1,48 @@
 import * as dbg from './util/debug.js'
 import { methodFor } from './util/index.js'
-import { datumHasHash } from './hash.js'
-import { unbound } from './datum.js'
+import { sectionMatchesDatum } from './datum.js'
+import { DatumMap } from './datum-map.js'
 
-export function Projection (predicate, section, observer) {
-  dbg.check(datumHasHash(section))
-
+export function Projection (predicate, section) {
   this.predicate = predicate
   this.section = section
-  this.suppliers = new Set()
-  // this.observers = new Set()
-  this.observer = observer
+  this.suppliers = new DatumMap()
+  this.observer = null
+
+  // Need to connect it to all matching clauses
+  for (const datum of predicate.clauses.keys()) {
+    this.supplyFact(datum)
+  }
 }
 
-methodFor(Projection, function supplyFact (datum) {
-  for (const dim of this.predicate.shape) {
-    if (this.section[dim] === unbound) {
-      continue
-    }
+methodFor(Projection, function resetObserver (observer) {
+  this.observer = observer
 
-    if (datum[dim] !== this.section[dim]) {
-      return  // not applicable
-    }
+  for (const datum of this.suppliers.keys()) {
+    this.observer.onAdded(datum)
+  }
+})
+
+methodFor(Projection, function supplyFact (datum) {
+  if (!sectionMatchesDatum(this.section, datum)) {
+    return
   }
 
-  // Applicable
-  this.suppliers.add(datum)
+  this.suppliers.set(datum, true)
 
   if (this.observer) {
     this.observer.onAdded(datum)
+  }
+})
+
+methodFor(Projection, function unsupplyFact (datum) {
+  if (!sectionMatchesDatum(this.section, datum)) {
+    return
+  }
+
+  this.suppliers.del(datum)
+
+  if (this.observer) {
+    this.observer.onRemoved(datum)
   }
 })

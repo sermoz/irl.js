@@ -8,7 +8,8 @@ export function Predicate (database, shape) {
   this.database = database
   this.shape = shape
   this.encodedShape = shape.join('-')
-  this.clauses = []
+  // TODO: this is temporary, will be different
+  this.clauses = new DatumMap()
   this.projections = new DatumMap()
 }
 
@@ -16,22 +17,47 @@ export function Predicate (database, shape) {
 methodFor(Predicate, function addClause (datum) {
   dbg.check(datumHasShape(datum, this.shape))
 
-  this.clauses.push(datum)
+  if (this.clauses.has(datum)) {
+    // For now, we support only unique facts/clauses. This is temporary of course.
+    return
+  }
+
+  this.clauses.set(datum, true)
 
   for (const proj of this.projections.values()) {
     proj.supplyFact(datum)
   }
 })
 
-methodFor(Predicate, function internProjection (section, observer) {
-  return this.projections.intern(section, (section) => {
-    const proj = new Projection(this, section, observer)
+methodFor(Predicate, function removeClause (datum) {
+  dbg.check(datumHasShape(datum, this.shape))
 
-    // Need to connect it to all matching clauses
-    for (const clause of this.clauses) {
-      proj.supplyFact(clause)
-    }
+  if (!this.clauses.has(datum)) {
+    // console.debug("removeClause(): datum not in clauses")
+    return
+  }
 
-    return proj
-  })
+  this.clauses.del(datum)
+
+  for (const proj of this.projections.values()) {
+    proj.unsupplyFact(datum)
+  }
+})
+
+methodFor(Predicate, function internProjection (section) {
+  let proj = this.projections.get(section)
+
+  if (proj === undefined) {
+    proj = new Projection(this, section)
+    this.projections.set(section, proj)
+  }
+
+  return proj
+})
+
+/**
+ * @returns: whether we deleted such a projection, or it didn't exist.
+ */
+methodFor(Predicate, function uninternProjection (section) {
+  return this.projections.del(section)
 })

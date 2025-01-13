@@ -1,0 +1,45 @@
+How to deal with indices?
+
+For example, let's talk about indices on projections. That means, when a clause (let's say
+a fact) is added, we need to find all matching projections. Same for the other direction:
+when a projection is added, we look for all matching clauses. But in both cases, we're
+looking for **matching** projections/clauses, not exact ones.
+
+For example, if a clause with the head `person: "jack" isParentOf: _` is added, we need to
+find all projections where `person` === "jack", but the `isParentOf` dimension may be
+anything. It may be either unbound or bound to some concrete value -- in both cases, the
+projection matches the clause.
+
+p1: v1, p2: v2, p3: v3
+
+A datum with all unbound dimensions fits anything, right?
+
+
+  R:  #p1 = 5, #p2 = 17, #p3 = 11
+
+  R1: #p2 = 4, #p3 = 2
+
+
+Provisional solution:
+
+  1) maintain cardinalities separately, for all needed dimensions
+
+  2) maintain each index (i.e. a combination of dimensions) separately, with index
+  suffixes corresponding to unbound dimensions. Like this:
+
+```js
+// Ordering: A, B, C
+{
+  [leaf]: new Set([proj, proj, ...]),  // A*, B*, C*
+  "A": new Map([
+    [A_value, {
+      [leaf]: new Set([proj, ...]),   // Ax, B*, C*
+      "B": new Map(...),
+      "C": new Map([
+        [C_value, new Set([proj, ...])],  // Ax, B*, Cx
+        ...
+      ])
+    }]
+  ]),
+}
+```

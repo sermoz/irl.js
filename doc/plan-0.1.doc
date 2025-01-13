@@ -15,19 +15,10 @@
     ])
     ```
 
-  - Support this playground type:
+  - Support this playground type: Node.js console application doing some primitive
+    projection updating.
 
-    - User can enter a name in an input box field
-    - User can enter pairs, i.e. data for a binary predicate, e.g. `loves`
-    - User can enter a name to follow: either "whom does X love?" or "who loves X?"
-    - User should see how these observed lists are populated with new data as it's added
-      by those pairs.
-
-  - The same but with Node.js, no browser:
-    - Just a console app accepting input and notifying of changed projections with
-      console.log
-
-  - Even simpler, for starters:
-    - Module-level assertions of some fact
-    - Make a rule that does some side effect (writes to console.log)
-    - Then call `irl.stabilize()`
+    - Watch query:  ?+ whom loves jack | person: "jack" loves: _
+    - Forget query: ?- whom loves jack
+    - Assert fact:  + person: "jack" loves: "tamara"
+    - Retract fact: - person: "jack" loves: "tamara"

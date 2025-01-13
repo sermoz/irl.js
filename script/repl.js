@@ -13,90 +13,146 @@ function main () {
 }
 
 async function loop (rl) {
-  for (;;) {
+  let go = true
+
+  while (go) {
     const input = await rl.question('DB> ')
 
-    if (input === 'quit') {
+    try {
+      go = interact(input) ?? true
+    }
+    catch (e) {
+      if (e instanceof ParseError) {
+        if (e.index === null) {
+          console.error(e.message)
+        }
+        else {
+          console.error(`Cannot parse at "${input.substr(e.index, 15)}": ${e.message}`)
+        }
+      }
+      else {
+        throw e
+      }
+    }
+  }
+}
+
+/**
+ * Perform single interaction with the user (prompt -> response).
+ *
+ * @return: undefined or true to continue, false to quit
+ */
+function interact (input) {
+  if (input === 'quit') {
+    return false
+  }
+
+  if (input === 'help') {
+    console.log(
+      [
+        'Possible interactions:',
+        '   DB> ?+ QUERY NAME | dim1: val1 dim2: val2 ... dimN: valN',
+        '   DB> ?- dim1: val1 dim2: val2 ... dimN: valN',
+        '   DB> + dim1: val1 dim2: val2 ... dimN: valN',
+        '   DB> - dim1: val1 dim2: val2 ... dimN: valN',
+        '   DB> dump',
+        '   DB> help',
+        '   DB> quit',
+        '',
+        'Values can be:',
+        '  - _ (variable placeholder -- only for queries, not fact assertions)',
+        '  - quoted strings ("string name")',
+        '  - integers',
+        '  - special names: true, false, null',
+      ].join('\n')
+    )
+    return
+  }
+
+  if (input === 'dump') {
+    irl.dumpDB(D)
+    return
+  }
+
+  if (input.startsWith('+') || input.startsWith('-')) {
+    const datum = parseDatum(input, 1)
+
+    if (Object.values(datum).includes(irl.unbound)) {
+      console.error('Cannot use variables in facts')
       return
     }
 
-    if (input === 'help') {
-      console.log(
-        [
-          'Possible interactions:',
-          '   DB> ? dim1: val1 dim2: val2 ... dimN: valN',
-          '   DB> ! dim1: val1 dim2: val2 ... dimN: valN',
-          '   DB> help',
-          '   DB> dump',
-          '   DB> quit',
-          '',
-          'Values can be:',
-          '  - _ (variable placeholder)',
-          '  - quoted strings ("string name")',
-          '  - integers',
-          '  - special names: true, false, null',
-        ].join('\n')
-      )
-      continue
+    if (input.startsWith('+')) {
+      irl.assert(D, datum)
+    }
+    else {
+      irl.retract(D, datum)
     }
 
-    if (input === 'dump') {
-      irl.dumpDB(D)
-      continue
-    }
+    return
+  }
 
-    if (input.startsWith('!')) {
-      const datum = parseDatum(input)
+  if (input.startsWith('?+')) {
+    const { question, section } = parseQuestion(input, 2)
 
-      if (datum !== null) {
-        if (Object.values(datum).includes(irl.unbound)) {
-          console.log('Cannot use variables in facts')
-          continue
+    irl.monitor(D, section, {
+      onAdded (datum) {
+        console.log('?', question, '+', datumAsString(datum))
+      },
+      onRemoved (datum) {
+        console.log('?', question, '-', datumAsString(datum))
+      }
+    })
+
+    return
+  }
+
+  if (input.startsWith('?-')) {
+    const section = parseDatum(input, 2)
+    irl.unmonitor(D, section)
+    return
+  }
+
+  if (input.startsWith('?+') || input.startsWith('?-')) {
+    const { question, section } = parseQuestion(input, 2)
+
+    if (input.startsWith('?+')) {
+      irl.monitor(D, section, {
+        onAdded (datum) {
+          console.log('?', question, '+', datumAsString(datum))
+        },
+        onRemoved (datum) {
+          console.log('?', question, '-', datumAsString(datum))
         }
-
-        irl.assert(D, datum)
-      }
-
-      continue
+      })
+    }
+    else {
+      irl.unmonitor(D, section)
     }
 
-    if (input.startsWith('?')) {
-      const args = parseDatum(input)
+    return
+  }
 
-      if (args !== null) {
-        irl.monitorProjection(D, args, {
-          onAdded (datum) {
-            console.log('+', datumAsString(datum))
-          },
-          onRemoved (datum) {
-            console.log('-', datumAsString(datum))
-          }
-        })
-      }
+  console.error('Cannot understand your input, please repeat')
+}
 
-      continue
-    }
+function parseQuestion (str, idx) {
+  const idxPipe = str.indexOf('|', idx)
 
-    console.log('Cannot understand your input, please repeat')
+  if (idxPipe === -1) {
+    throw new ParseError('Query does not have the pipe (|) character')
+  }
+
+  const section = parseDatum(str, idxPipe + 1)
+
+  return {
+    question: str.substring(idx, idxPipe).trim(),
+    section,
   }
 }
 
-function parseDatum (str, idx = 1) {
-  try {
-    return doParseDatum(str, idx)
-  }
-  catch (e) {
-    if (e instanceof ParseError) {
-      console.log(`Cannot parse at "${str.substr(e.index, 15)}"`)
-      return null
-    }
-
-    throw e
-  }
-}
-
-function doParseDatum (str, idx) {
-  const reDim = /(?<dim>[a-z]\w*):\s*((?<str>"[^"]*")|(?<num>[0-9]+)|(?<name>\w+))/iy
+function parseDatum (str, idx) {
+  const reDim = /(?<dim>[a-z]\w*):\s*((?<str>"[^"]*")|(?<num>[0-9]+)|(?<name>\w+))/diy
   const datum = {}
 
   for (;;) {
@@ -118,7 +174,7 @@ function doParseDatum (str, idx) {
     }
 
     if (Object.hasOwn(datum, mo.groups.dim)) {
-      throw new ParseError(idx, 'duplicate dimension')
+      throw new ParseError(mo.indices.groups.dim[0], 'duplicate dimension')
     }
 
     let val
@@ -130,7 +186,7 @@ function doParseDatum (str, idx) {
       const int = Number.parseInt(mo.groups.num)
 
       if (String(int) !== mo.groups.num) {
-        throw new ParseError(idx, 'cannot parse as integer')
+        throw new ParseError(mo.indices.groups.num[0], 'cannot parse as integer')
       }
 
       val = int
@@ -154,7 +210,8 @@ function doParseDatum (str, idx) {
           break
 
         default:
-          throw new ParseError(idx, 'bad name')
+          // console.dir(mo, { depth: 5 })
+          throw new ParseError(mo.indices.groups.name[0], 'bad name')
       }
     }
     else {
@@ -170,7 +227,12 @@ function doParseDatum (str, idx) {
 
 class ParseError extends Error {
   constructor (index, message = null) {
-    super(message || 'cannot parse')
+    if (arguments.length === 1) {
+      message = index
+      index = null
+    }
+
+    super(message ?? 'bad syntax')
     this.index = index
   }
 }
@@ -181,7 +243,7 @@ function datumAsString (datum) {
       for (const dim in datum) {
         yield dim
         yield ': '
-        yield datum[dim]
+        yield JSON.stringify(datum[dim])
         yield ' '
       }
     }())
